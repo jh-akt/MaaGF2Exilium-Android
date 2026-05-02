@@ -1,6 +1,7 @@
 package com.maaframework.android.gf2
 
 import android.content.Context
+import com.maaframework.android.model.MaaLogLevels
 import java.io.InputStream
 import java.io.OutputStream
 import kotlinx.serialization.Serializable
@@ -46,7 +47,7 @@ class AppSettingsRepository(context: Context) {
             taskOptionSelectionsByTask = decode(KEY_TASK_OPTION_SELECTIONS, emptyMap()),
             taskInputValuesByTask = decode(KEY_TASK_INPUT_VALUES, emptyMap()),
             overrideJson = prefs.getString(KEY_OVERRIDE_JSON, "{}") ?: "{}",
-            logLevel = prefs.getString(KEY_LOG_LEVEL, "info") ?: "info",
+            logLevel = MaaLogLevels.normalize(prefs.getString(KEY_LOG_LEVEL, MaaLogLevels.INFO)),
         )
     }
 
@@ -79,7 +80,7 @@ class AppSettingsRepository(context: Context) {
     }
 
     fun saveLogLevel(value: String) {
-        prefs.edit().putString(KEY_LOG_LEVEL, value).apply()
+        prefs.edit().putString(KEY_LOG_LEVEL, MaaLogLevels.normalize(value)).apply()
     }
 
     fun exportTo(outputStream: OutputStream) {
@@ -113,7 +114,7 @@ class AppSettingsRepository(context: Context) {
             .putString(KEY_TASK_OPTION_SELECTIONS, json.encodeToString(settings.taskOptionSelectionsByTask))
             .putString(KEY_TASK_INPUT_VALUES, json.encodeToString(settings.taskInputValuesByTask))
             .putString(KEY_OVERRIDE_JSON, settings.overrideJson)
-            .putString(KEY_LOG_LEVEL, settings.logLevel)
+            .putString(KEY_LOG_LEVEL, MaaLogLevels.normalize(settings.logLevel))
             .apply()
     }
 

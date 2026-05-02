@@ -6,11 +6,12 @@ import android.view.Surface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.maaframework.android.catalog.InterfaceCatalogLoader
+import com.maaframework.android.catalog.TaskOptionSupport
 import com.maaframework.android.model.CatalogSnapshot
+import com.maaframework.android.model.MaaLogLevels
 import com.maaframework.android.model.PresetDescriptor
 import com.maaframework.android.model.RootEnvironmentReport
 import com.maaframework.android.model.RunRequest
-import com.maaframework.android.model.RunSessionPhase
 import com.maaframework.android.model.RuntimeLogChunk
 import com.maaframework.android.model.RuntimeStateSnapshot
 import com.maaframework.android.model.TaskDescriptor
@@ -170,8 +171,9 @@ class MainViewModel(
     }
 
     fun updateLogLevel(value: String) {
-        _uiState.value = _uiState.value.copy(logLevel = value)
-        settingsRepository.saveLogLevel(value)
+        val normalized = MaaLogLevels.normalize(value)
+        _uiState.value = _uiState.value.copy(logLevel = normalized)
+        settingsRepository.saveLogLevel(normalized)
     }
 
     fun updateTaskSwitchOption(taskId: String, optionId: String, caseName: String) {
@@ -752,7 +754,7 @@ class MainViewModel(
 
     private fun buildTaskOptionOverride(task: TaskDescriptor, resourceId: String?): String? {
         return buildOptionOverride(
-            options = ProjectInterfaceSupport.filterOptionsForResource(task.options, resourceId),
+            options = TaskOptionSupport.filterOptionsForResource(task.options, resourceId),
             selectedByOption = _uiState.value.taskOptionSelectionsByTask[task.id].orEmpty(),
             inputValuesByOption = _uiState.value.taskInputValuesByTask[task.id].orEmpty(),
         )
@@ -794,7 +796,7 @@ class MainViewModel(
                 TaskOptionType.Select,
                 TaskOptionType.Checkbox -> {
                     val selectedCaseNames = selectedByOption[option.id].takeUnless { it.isNullOrEmpty() }
-                        ?: ProjectInterfaceSupport.defaultSelectionForOption(option)
+                        ?: TaskOptionSupport.defaultSelectionForOption(option)
                     option.cases
                         .filter { it.name in selectedCaseNames }
                         .forEach { optionCase ->
@@ -939,8 +941,8 @@ class MainViewModel(
 
     private fun validateTaskOptionSelections(tasks: List<TaskDescriptor>, resourceId: String?): String? {
         tasks.forEach { task ->
-            val errors = ProjectInterfaceSupport.collectInputValidationErrors(
-                options = ProjectInterfaceSupport.filterOptionsForResource(task.options, resourceId),
+            val errors = TaskOptionSupport.collectInputValidationErrors(
+                options = TaskOptionSupport.filterOptionsForResource(task.options, resourceId),
                 selectedByOption = _uiState.value.taskOptionSelectionsByTask[task.id].orEmpty(),
                 inputValuesByOption = _uiState.value.taskInputValuesByTask[task.id].orEmpty(),
             )
@@ -973,7 +975,7 @@ class MainViewModel(
         into: MutableMap<String, Set<String>>,
     ) {
         options.forEach { option ->
-            val defaults = ProjectInterfaceSupport.defaultSelectionForOption(option)
+            val defaults = TaskOptionSupport.defaultSelectionForOption(option)
             if (defaults.isNotEmpty()) {
                 into[option.id] = defaults
             }
@@ -1012,7 +1014,7 @@ class MainViewModel(
             if (option.inputs.isNotEmpty()) {
                 into[option.id] = option.inputs.associate { input -> input.name to input.defaultValue }
             }
-            val defaults = ProjectInterfaceSupport.defaultSelectionForOption(option)
+            val defaults = TaskOptionSupport.defaultSelectionForOption(option)
             option.cases
                 .filter { it.name in defaults }
                 .forEach { optionCase ->
@@ -1146,7 +1148,7 @@ class MainViewModel(
 
         fun visibleTasks(tasks: List<TaskDescriptor>, resourceId: String?): List<TaskDescriptor> {
             return tasks.filter { task ->
-                ProjectInterfaceSupport.taskSupportsResource(task, resourceId)
+                TaskOptionSupport.taskSupportsResource(task, resourceId)
             }
         }
 
